@@ -3,6 +3,29 @@ set -euo pipefail
 
 APP_NAME="skland-login-web"
 
+upsert_env_key() {
+  local key="$1"
+  local value="$2"
+  if grep -q "^${key}=" .env; then
+    sed -i "s#^${key}=.*#${key}=${value}#" .env
+  else
+    printf '%s=%s\n' "${key}" "${value}" >> .env
+  fi
+}
+
+generate_secret() {
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - <<'PY'
+import secrets
+print(secrets.token_hex(32))
+PY
+  elif command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+  else
+    date +%s | sha256sum | awk '{print $1}'
+  fi
+}
+
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
   COMPOSE_CMD="docker compose"
 elif command -v docker-compose >/dev/null 2>&1; then
@@ -18,15 +41,30 @@ else
   BUILD_COMMIT="manual-$(date +%Y%m%d%H%M)"
 fi
 
-if [ -f .env ]; then
-  if grep -q '^BUILD_COMMIT=' .env; then
-    sed -i "s/^BUILD_COMMIT=.*/BUILD_COMMIT=${BUILD_COMMIT}/" .env
+# 自动准备 .env。优先复用模板，其次创建最小配置。
+if [ ! -f .env ]; then
+  if [ -f .env.example ]; then
+    cp .env.example .env
   else
-    printf '\nBUILD_COMMIT=%s\n' "${BUILD_COMMIT}" >> .env
+    cat > .env <<'EOF'
+PORT=5000
+FLASK_SECRET_KEY=change-me-to-a-long-random-string
+BUILD_COMMIT=unknown
+EOF
   fi
-else
-  printf 'BUILD_COMMIT=%s\n' "${BUILD_COMMIT}" > .env
 fi
+
+# 补齐必需配置并更新构建号
+if ! grep -q '^PORT=' .env; then
+  printf 'PORT=5000\n' >> .env
+fi
+
+current_secret="$(grep '^FLASK_SECRET_KEY=' .env | head -n1 | cut -d'=' -f2- || true)"
+if [ -z "${current_secret}" ] || [ "${current_secret}" = "change-me-to-a-long-random-string" ]; then
+  upsert_env_key "FLASK_SECRET_KEY" "$(generate_secret)"
+fi
+
+upsert_env_key "BUILD_COMMIT" "${BUILD_COMMIT}"
 
 echo "[INFO] BUILD_COMMIT=${BUILD_COMMIT}"
 echo "[INFO] Pulling latest code..."

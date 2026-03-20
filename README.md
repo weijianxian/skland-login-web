@@ -82,6 +82,18 @@ PORT=8080 uv run run.py
 
 本项目已提供 `Dockerfile`（基于 uv）和 `docker-compose.yml`。
 
+推荐先准备 `.env`：
+
+```bash
+cp .env.example .env
+```
+
+然后编辑 `.env`，至少设置：
+
+- `FLASK_SECRET_KEY`（务必改成随机长字符串）
+- `PORT`（可选，默认 5000）
+- `BUILD_COMMIT`（构建提交号，自动化脚本会自动写入）
+
 方式一：直接使用 Docker
 
 ```bash
