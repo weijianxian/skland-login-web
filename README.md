@@ -29,6 +29,7 @@ uv pip install -e .
 ### 2. 运行应用
 
 ```bash
+# 使用 uvicorn 启动
 uv run run.py
 ```
 
@@ -90,6 +91,7 @@ PORT=8080 uv run run.py
 |--------|------|--------|
 | `PORT` | Web 服务端口 | `5000` |
 | `FLASK_SECRET_KEY` | Flask 会话密钥 | 随机生成 |
+| `BUILD_COMMIT` | 构建提交号（页面底部显示） | `unknown` |
 
 ## 部署建议
 
@@ -100,13 +102,14 @@ PORT=8080 uv run run.py
 方式一：直接使用 Docker
 
 ```bash
-docker build -t skland-login-web .
-docker run -d --name skland-login-web -p 5000:5000 -v ./data:/app/data -e FLASK_SECRET_KEY=your-random-secret skland-login-web
+docker build --build-arg BUILD_COMMIT=$(git rev-parse --short=12 HEAD) -t skland-login-web .
+docker run -d --name skland-login-web -p 5000:5000 -v ./data:/app/data -e FLASK_SECRET_KEY=your-random-secret -e BUILD_COMMIT=$(git rev-parse --short=12 HEAD) skland-login-web
 ```
 
 方式二：使用 Docker Compose（推荐）
 
 ```bash
+export BUILD_COMMIT=$(git rev-parse --short=12 HEAD)
 docker compose up -d --build
 ```
 

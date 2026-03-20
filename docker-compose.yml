@@ -1,6 +1,9 @@
 services:
   skland-login-web:
-    build: .
+    build:
+      context: .
+      args:
+        BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
     container_name: skland-login-web
     restart: unless-stopped
     ports:
@@ -8,5 +11,6 @@ services:
     environment:
       - PORT=5000
       - FLASK_SECRET_KEY=change-me-to-a-long-random-string
+      - BUILD_COMMIT=${BUILD_COMMIT:-unknown}
     volumes:
       - ./data:/app/data

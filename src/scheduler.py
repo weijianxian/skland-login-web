@@ -97,10 +97,10 @@ def allocate_time(config: storage.AppConfig, existing_users: list[storage.User])
     return f"{hour:02d}:{minute:02d}"
 
 
-def reallocate_all_times():
+def reallocate_all_times(notify_users: bool = False):
     """
     重新分配所有用户的签到时间（均衡分布）。
-    当管理员修改时间窗口设置后调用。
+    :param notify_users: 是否给开启通知的用户发送时间变更通知。
     """
     config = storage.load_config()
     users = storage.load_users()
@@ -125,8 +125,8 @@ def reallocate_all_times():
         old_time = user.scheduled_time
         user.scheduled_time = new_time
 
-        # 如果时间变了而且用户开了通知
-        if old_time != new_time and user.notify_time_change:
+        # 仅在显式允许时，才通知开启了时间变动通知的用户
+        if notify_users and old_time != new_time and user.notify_time_change:
             notify_time_change(user.sendkey, new_time)
 
     storage.save_users(users)

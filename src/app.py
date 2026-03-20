@@ -11,7 +11,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 
 from . import storage
 from . import scheduler as sched_module
-from .notifier import notify_time_change
 from .skyland import parse_token
 
 logger = logging.getLogger(__name__)
@@ -100,10 +99,6 @@ def register():
 
     # 添加调度任务
     sched_module.schedule_user(user)
-
-    # 如果开启了时间变动通知，告知用户分配的时间
-    if notify and sendkey:
-        notify_time_change(sendkey, scheduled_time)
 
     flash(f"注册成功! 您的每日签到时间为 {scheduled_time}，用户ID: {user.id}", "success")
     return redirect(url_for("index"))
@@ -214,8 +209,8 @@ def admin_update_config():
 
     # 如果时间窗口变了，重新分配所有用户时间
     if old_start != new_start or old_end != new_end:
-        sched_module.reallocate_all_times()
-        flash("配置已更新，所有用户签到时间已重新分配", "success")
+        sched_module.reallocate_all_times(notify_users=False)
+        flash("配置已更新，所有用户签到时间已重新分配（不发送通知）", "success")
     else:
         flash("配置已更新", "success")
 
@@ -259,8 +254,8 @@ def admin_reallocate():
     if not session.get("is_admin"):
         return redirect(url_for("admin_login_page"))
 
-    sched_module.reallocate_all_times()
-    flash("所有用户签到时间已重新分配", "success")
+    sched_module.reallocate_all_times(notify_users=True)
+    flash("所有用户签到时间已重新分配，已通知开启时间变动通知的用户", "success")
     return redirect(url_for("admin_panel"))
 
 
