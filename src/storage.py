@@ -8,8 +8,11 @@ import os
 import threading
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
+
+TIMEZONE = ZoneInfo("Asia/Shanghai")
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
@@ -87,7 +90,7 @@ def add_user(token: str, sendkey: str, scheduled_time: str, notify_time_change: 
         sendkey=sendkey,
         scheduled_time=scheduled_time,
         notify_time_change=notify_time_change,
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(tz=TIMEZONE).isoformat(),
         remark=remark,
     )
     users.append(user)

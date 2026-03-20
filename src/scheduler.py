@@ -10,6 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from . import storage
+from .storage import TIMEZONE
 from .notifier import notify_sign_result, notify_time_change, notify_token_removed
 from .skyland import do_sign
 
@@ -28,7 +29,7 @@ def _execute_sign(user_id: str):
     logger.info(f"开始为用户 {user_id} (备注: {user.remark}) 执行签到")
     success, logs = do_sign(user.token)
 
-    now = datetime.now().isoformat()
+    now = datetime.now(tz=TIMEZONE).isoformat()
     if success:
         storage.update_user(user_id, last_sign_at=now, last_sign_result="成功: " + "; ".join(logs))
         logger.info(f"用户 {user_id} 签到成功")

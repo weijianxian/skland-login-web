@@ -14,5 +14,6 @@ services:
       - PORT=${PORT:-5000}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
       - BUILD_COMMIT=${BUILD_COMMIT:-unknown}
+      - TZ=Asia/Shanghai
     volumes:
       - ./data:/app/data
