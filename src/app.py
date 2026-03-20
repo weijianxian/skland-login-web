@@ -61,12 +61,41 @@ def index():
     return render_template("index.html")
 
 
+def _parse_and_validate_time(time_text: str, config: storage.AppConfig) -> tuple[str | None, str | None]:
+    try:
+        hour_str, minute_str = time_text.split(":")
+        hour = int(hour_str)
+        minute = int(minute_str)
+    except (ValueError, TypeError):
+        return None, "自定义签到时间格式无效，请使用 HH:MM"
+
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None, "自定义签到时间超出范围，请输入有效时间"
+
+    start = config.sign_start_hour * 60 + config.sign_start_minute
+    end = config.sign_end_hour * 60 + config.sign_end_minute
+    current = hour * 60 + minute
+    if start <= end:
+        in_window = start <= current <= end
+    else:
+        in_window = current >= start or current <= end
+
+    if not in_window:
+        return (
+            None,
+            f"自定义时间需在签到窗口内: {config.sign_start_hour:02d}:{config.sign_start_minute:02d} - {config.sign_end_hour:02d}:{config.sign_end_minute:02d}",
+        )
+
+    return f"{hour:02d}:{minute:02d}", None
+
+
 @app.route("/register", methods=["POST"])
 def register():
     """用户提交 Token"""
     raw_token = request.form.get("token", "").strip()
     sendkey = request.form.get("sendkey", "").strip()
     remark = request.form.get("remark", "").strip()
+    custom_time = request.form.get("scheduled_time", "").strip()
     notify = request.form.get("notify_time_change") == "on"
 
     if not raw_token:
@@ -82,8 +111,14 @@ def register():
     config = storage.load_config()
     users = storage.load_users()
 
-    # 分配签到时间
-    scheduled_time = sched_module.allocate_time(config, users)
+    if custom_time:
+        scheduled_time, err = _parse_and_validate_time(custom_time, config)
+        if err:
+            flash(err, "error")
+            return redirect(url_for("index"))
+    else:
+        # 未填写时走默认随机均衡分配
+        scheduled_time = sched_module.allocate_time(config, users)
 
     try:
         user = storage.add_user(
@@ -101,6 +136,51 @@ def register():
     sched_module.schedule_user(user)
 
     flash(f"注册成功! 您的每日签到时间为 {scheduled_time}，用户ID: {user.id}", "success")
+    return redirect(url_for("index"))
+
+
+@app.route("/update-time-by-token", methods=["POST"])
+def update_time_by_token():
+    """用户通过 token 修改自己的签到时间"""
+    raw_token = request.form.get("token", "").strip()
+    custom_time = request.form.get("scheduled_time", "").strip()
+
+    if not raw_token:
+        flash("Token 不能为空", "error")
+        return redirect(url_for("index"))
+
+    if not custom_time:
+        flash("新的签到时间不能为空", "error")
+        return redirect(url_for("index"))
+
+    token = parse_token(raw_token)
+    if not token:
+        flash("Token 格式无效", "error")
+        return redirect(url_for("index"))
+
+    config = storage.load_config()
+    scheduled_time, err = _parse_and_validate_time(custom_time, config)
+    if err:
+        flash(err, "error")
+        return redirect(url_for("index"))
+
+    users = storage.load_users()
+    target_user = None
+    for user in users:
+        if user.token == token:
+            target_user = user
+            break
+
+    if not target_user:
+        flash("未找到对应 Token 的账号", "error")
+        return redirect(url_for("index"))
+
+    storage.update_user(target_user.id, scheduled_time=scheduled_time)
+    refreshed = storage.get_user_by_id(target_user.id)
+    if refreshed:
+        sched_module.schedule_user(refreshed)
+
+    flash(f"签到时间已更新为 {scheduled_time}", "success")
     return redirect(url_for("index"))
 
 

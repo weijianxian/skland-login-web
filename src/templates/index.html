@@ -52,7 +52,7 @@
             font-size: 0.8rem;
             color: #777;
         }
-        input[type="text"], input[type="password"], textarea {
+        input[type="text"], input[type="password"], input[type="time"], textarea {
             width: 100%;
             padding: 12px 14px;
             border: 1px solid rgba(255,255,255,0.15);
@@ -142,20 +142,41 @@
         .instructions ol {
             padding-left: 20px;
         }
-        .danger-zone {
-            margin-top: 26px;
-            padding-top: 20px;
-            border-top: 1px dashed rgba(220, 53, 69, 0.45);
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
         }
-        .danger-title {
-            margin-bottom: 12px;
-            color: #f5a5a5;
-            font-size: 0.95rem;
+        .tab-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(255,255,255,0.06);
+            color: #d8dde3;
+            cursor: pointer;
             font-weight: 600;
+        }
+        .tab-btn.active {
+            border-color: rgba(77, 171, 247, 0.7);
+            background: rgba(77, 171, 247, 0.2);
+            color: #ffffff;
+        }
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
         }
         .btn-danger {
             margin-top: 10px;
             background: linear-gradient(135deg, #dc3545, #b52a37);
+        }
+        .btn-warning {
+            margin-top: 10px;
+            background: linear-gradient(135deg, #f59f00, #f08c00);
         }
     </style>
 </head>
@@ -181,34 +202,60 @@
             </ol>
         </div>
 
-        <form action="/register" method="POST">
-            <div class="form-group">
-                <label>鹰角通行证 Token <span class="hint">（必填）</span></label>
-                <textarea name="token" placeholder='粘贴完整 JSON 或 content 字段值' required></textarea>
-            </div>
+        <div class="tabs">
+            <button type="button" class="tab-btn active" data-tab="tab-add">新加账号</button>
+            <button type="button" class="tab-btn" data-tab="tab-update">修改时间</button>
+            <button type="button" class="tab-btn" data-tab="tab-delete">删除账号</button>
+        </div>
 
-            <div class="form-group">
-                <label>Server酱 SendKey <span class="hint">（选填，用于接收签到结果通知。<a href="https://sc3.ft07.com/" target="_blank" style="color:#4dabf7;">获取 SendKey</a>）</span></label>
-                <input type="text" name="sendkey" placeholder="形如 sctp12345tXXXX...">
-            </div>
-
-            <div class="form-group">
-                <label>备注 <span class="hint">（选填，方便自己辨识）</span></label>
-                <input type="text" name="remark" placeholder="例如: 我的大号">
-            </div>
-
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" name="notify_time_change" id="notify_time_change" checked>
-                    <label for="notify_time_change">签到时间变动时通知我</label>
+        <div id="tab-add" class="tab-panel active">
+            <form action="/register" method="POST">
+                <div class="form-group">
+                    <label>鹰角通行证 Token <span class="hint">（必填）</span></label>
+                    <textarea name="token" placeholder='粘贴完整 JSON 或 content 字段值' required></textarea>
                 </div>
-            </div>
 
-            <button type="submit" class="btn">提交</button>
-        </form>
+                <div class="form-group">
+                    <label>Server酱 SendKey <span class="hint">（选填，用于接收签到结果通知。<a href="https://sc3.ft07.com/" target="_blank" style="color:#4dabf7;">获取 SendKey</a>）</span></label>
+                    <input type="text" name="sendkey" placeholder="形如 sctp12345tXXXX...">
+                </div>
 
-        <div class="danger-zone">
-            <div class="danger-title">删除我的账号</div>
+                <div class="form-group">
+                    <label>备注 <span class="hint">（选填，方便自己辨识）</span></label>
+                    <input type="text" name="remark" placeholder="例如: 我的大号">
+                </div>
+
+                <div class="form-group">
+                    <label>签到时间 <span class="hint">（选填，不填则系统随机分配）</span></label>
+                    <input type="time" name="scheduled_time" step="60">
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="notify_time_change" id="notify_time_change" checked>
+                        <label for="notify_time_change">签到时间变动时通知我</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">提交</button>
+            </form>
+        </div>
+
+        <div id="tab-update" class="tab-panel">
+            <form action="/update-time-by-token" method="POST">
+                <div class="form-group">
+                    <label>账号 Token <span class="hint">（必填，支持粘贴完整 JSON）</span></label>
+                    <textarea name="token" placeholder="输入已注册账号对应的 Token" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>新的签到时间 <span class="hint">（必填，需在当前签到窗口内）</span></label>
+                    <input type="time" name="scheduled_time" step="60" required>
+                </div>
+                <button type="submit" class="btn btn-warning">修改时间</button>
+            </form>
+        </div>
+
+        <div id="tab-delete" class="tab-panel">
             <form action="/delete-by-token" method="POST">
                 <div class="form-group">
                     <label>用于删除的 Token <span class="hint">（必填，支持粘贴完整 JSON）</span></label>
@@ -226,5 +273,22 @@
             Build: {{ build_commit }}
         </div>
     </div>
+    <script>
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabPanels = document.querySelectorAll('.tab-panel');
+
+        tabButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-tab');
+                tabButtons.forEach((btn) => btn.classList.remove('active'));
+                tabPanels.forEach((panel) => panel.classList.remove('active'));
+                button.classList.add('active');
+                const target = document.getElementById(targetId);
+                if (target) {
+                    target.classList.add('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
