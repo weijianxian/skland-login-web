@@ -145,6 +145,12 @@
             font-size: 0.85rem;
         }
         .stat strong { color: #4dabf7; }
+        .footer {
+            text-align: center;
+            color: #6f7d87;
+            font-size: 0.8rem;
+            margin: 10px 0 28px;
+        }
     </style>
 </head>
 <body>
@@ -293,6 +299,8 @@
             <div class="empty-state">暂无调度任务</div>
             {% endif %}
         </div>
+
+        <div class="footer">Build: {{ build_commit }}</div>
     </div>
 </body>
 </html>

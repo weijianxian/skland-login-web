@@ -4,6 +4,7 @@ Flask Web 应用 - 森空岛自动签到 Web 服务
 
 import logging
 import os
+import subprocess
 
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
@@ -21,6 +22,33 @@ app = Flask(
     static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"),
 )
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "skland-auto-sign-secret-key-change-me")
+
+
+def _resolve_build_commit() -> str:
+    for key in ("BUILD_COMMIT", "GIT_COMMIT", "COMMIT_SHA"):
+        value = os.environ.get(key, "").strip()
+        if value:
+            return value[:12]
+
+    repo_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short=12", "HEAD"],
+            cwd=repo_root,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        return commit or "unknown"
+    except Exception:
+        return "unknown"
+
+
+BUILD_COMMIT = _resolve_build_commit()
+
+
+@app.context_processor
+def inject_build_meta():
+    return {"build_commit": BUILD_COMMIT}
 
 
 # ------------------------------------------------------------------
