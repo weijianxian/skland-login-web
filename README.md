@@ -14,24 +14,7 @@
 
 ## 快速开始
 
-### 1. 安装依赖
-
-```bash
-pip install -e .
-```
-
-或使用 uv (推荐):
-
-```bash
-uv pip install -e .
-```
-
-### 2. 运行应用
-
-```bash
-# 使用 uvicorn 启动
 uv run run.py
-```
 
 默认运行在 `http://localhost:5000`
 
@@ -41,14 +24,14 @@ uv run run.py
 PORT=8080 uv run run.py
 ```
 
-### 3. 用户注册
+## 用户注册
 
 1. 访问首页 `http://localhost:5000`
 2. 按照页面说明获取鹰角网络通行证 Token
 3. （可选）填写 Server酱 SendKey 接收通知
 4. 提交后系统自动分配签到时间
 
-### 4. 管理面板
+## 管理面板
 
 访问 `http://localhost:5000/admin`
 
@@ -88,7 +71,7 @@ PORT=8080 uv run run.py
 ## 环境变量
 
 | 变量名 | 说明 | 默认值 |
-|--------|------|--------|
+| --- | --- | --- |
 | `PORT` | Web 服务端口 | `5000` |
 | `FLASK_SECRET_KEY` | Flask 会话密钥 | 随机生成 |
 | `BUILD_COMMIT` | 构建提交号（页面底部显示） | `unknown` |
@@ -123,6 +106,26 @@ docker compose logs -f
 
 ```bash
 docker compose down
+```
+
+### 自动化更新（推荐）
+
+项目根目录已提供一键更新脚本 `deploy-update.sh`，会自动完成：
+
+1. 生成并写入 `BUILD_COMMIT` 到 `.env`
+2. 重新构建并强制重建容器
+3. 输出容器状态与最近日志
+
+首次执行请先授权：
+
+```bash
+chmod +x ./deploy-update.sh
+```
+
+每次更新直接运行：
+
+```bash
+./deploy-update.sh
 ```
 
 ### systemd 服务
