@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理面板 - 森空岛自动签到</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f1923;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h2 { font-size: 1.1rem; color: #fff; }
+        .navbar-links a {
+            color: #4dabf7;
+            text-decoration: none;
+            margin-left: 16px;
+            font-size: 0.9rem;
+        }
+        .main {
+            max-width: 1100px;
+            margin: 24px auto;
+            padding: 0 20px;
+        }
+        .flash {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .flash.success { background: rgba(40,167,69,0.2); border: 1px solid rgba(40,167,69,0.4); color: #a3e4a5; }
+        .flash.error { background: rgba(220,53,69,0.2); border: 1px solid rgba(220,53,69,0.4); color: #f5a5a5; }
+
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card h3 {
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        /* 配置表单 */
+        .config-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .config-form .form-group { margin-bottom: 0; }
+        .config-form .full-width { grid-column: 1 / -1; }
+        label { display: block; margin-bottom: 4px; color: #aaa; font-size: 0.85rem; }
+        input[type="number"], input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+        input:focus { outline: none; border-color: #4dabf7; }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-primary { background: #3a7bd5; color: #fff; }
+        .btn-danger { background: #c0392b; color: #fff; }
+        .btn-warning { background: #e67e22; color: #fff; }
+        .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+
+        /* 用户表格 */
+        .table-wrapper { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.06);
+            color: #aaa;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        td {
+            padding: 10px 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            vertical-align: middle;
+        }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        .token-cell {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .time-badge {
+            background: rgba(77,171,247,0.15);
+            color: #4dabf7;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .actions { display: flex; gap: 6px; }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .stat {
+            display: inline-block;
+            background: rgba(255,255,255,0.06);
+            border-radius: 8px;
+            padding: 8px 16px;
+            margin-right: 12px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .stat strong { color: #4dabf7; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h2>管理面板</h2>
+        <div class="navbar-links">
+            <a href="/">首页</a>
+            <a href="/admin/logout">退出</a>
+        </div>
+    </nav>
+
+    <div class="main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- 统计 -->
+        <div class="card">
+            <h3>概览</h3>
+            <div class="stat">注册用户: <strong>{{ users|length }}</strong></div>
+            <div class="stat">活跃任务: <strong>{{ jobs|length }}</strong></div>
+            <div class="stat">签到窗口: <strong>{{ "%02d:%02d"|format(config.sign_start_hour, config.sign_start_minute) }} - {{ "%02d:%02d"|format(config.sign_end_hour, config.sign_end_minute) }}</strong></div>
+        </div>
+
+        <!-- 签到时间窗口配置 -->
+        <div class="card">
+            <h3>签到时间窗口设置</h3>
+            <form action="/admin/config" method="POST">
+                <div class="config-form">
+                    <div class="form-group">
+                        <label>开始时间 - 小时 (0-23)</label>
+                        <input type="number" name="sign_start_hour" value="{{ config.sign_start_hour }}" min="0" max="23">
+                    </div>
+                    <div class="form-group">
+                        <label>开始时间 - 分钟 (0-59)</label>
+                        <input type="number" name="sign_start_minute" value="{{ config.sign_start_minute }}" min="0" max="59">
+                    </div>
+                    <div class="form-group">
+                        <label>结束时间 - 小时 (0-23)</label>
+                        <input type="number" name="sign_end_hour" value="{{ config.sign_end_hour }}" min="0" max="23">
+                    </div>
+                    <div class="form-group">
+                        <label>结束时间 - 分钟 (0-59)</label>
+                        <input type="number" name="sign_end_minute" value="{{ config.sign_end_minute }}" min="0" max="59">
+                    </div>
+                    <div class="form-group">
+                        <label>管理密码 (留空则不修改)</label>
+                        <input type="password" name="admin_password" placeholder="留空不修改">
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end; gap:8px;">
+                        <button type="submit" class="btn btn-primary">保存配置</button>
+                    </div>
+                </div>
+            </form>
+            <div style="margin-top: 16px;">
+                <form action="/admin/reallocate" method="POST" style="display:inline">
+                    <button type="submit" class="btn btn-warning btn-sm"
+                        onclick="return confirm('确定要重新分配所有用户的签到时间吗？开启了时间变动通知的用户将收到通知。')">
+                        重新分配所有签到时间
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 用户列表 -->
+        <div class="card">
+            <h3>用户列表</h3>
+            {% if users %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>备注</th>
+                            <th>Token</th>
+                            <th>签到时间</th>
+                            <th>时间通知</th>
+                            <th>最近签到</th>
+                            <th>最近结果</th>
+                            <th>注册时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><code>{{ user.id }}</code></td>
+                            <td>{{ user.remark or '-' }}</td>
+                            <td><span class="token-cell" title="{{ user.token }}">{{ user.token[:16] }}...</span></td>
+                            <td><span class="time-badge">{{ user.scheduled_time }}</span></td>
+                            <td>{{ '是' if user.notify_time_change else '否' }}</td>
+                            <td>{{ user.last_sign_at[:16] if user.last_sign_at else '从未' }}</td>
+                            <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                                title="{{ user.last_sign_result }}">
+                                {{ user.last_sign_result[:40] if user.last_sign_result else '-' }}
+                            </td>
+                            <td>{{ user.created_at[:10] }}</td>
+                            <td>
+                                <div class="actions">
+                                    <form action="/admin/user/{{ user.id }}/sign" method="POST">
+                                        <button class="btn btn-primary btn-sm" title="手动触发签到">签到</button>
+                                    </form>
+                                    <form action="/admin/user/{{ user.id }}/delete" method="POST"
+                                          onsubmit="return confirm('确定要删除该用户吗？')">
+                                        <button class="btn btn-danger btn-sm">删除</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">暂无注册用户</div>
+            {% endif %}
+        </div>
+
+        <!-- 调度任务 -->
+        <div class="card">
+            <h3>当前调度任务</h3>
+            {% if jobs %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>任务 ID</th>
+                            <th>下次执行时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in jobs %}
+                        <tr>
+                            <td><code>{{ job.id }}</code></td>
+                            <td>{{ job.next_run }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">暂无调度任务</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
